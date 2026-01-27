@@ -6,484 +6,185 @@
     <title>GorAM App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --primary: #f39c12; /* Оранжевый Гора */
-            --secondary: #e74c3c; /* Красный */
-            --bg-dark: #121212;
-            --bg-card: #1e1e1e;
-            --text: #ffffff;
-        }
-
         body {
-            background: linear-gradient(135deg, var(--bg-dark), #2c1e1e); /* Темный фон с оттенком */
-            color: var(--text);
-            font-family: 'Montserrat', sans-serif; /* Более современный шрифт */
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
+            background: #111; color: white; font-family: sans-serif;
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 10px;
         }
-
-        /* --- ОБЩИЕ ЭЛЕМЕНТЫ --- */
-        h1, h2 { margin: 0 0 15px 0; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
-        h1 { color: var(--primary); text-shadow: 0 0 15px rgba(243, 156, 18, 0.4); }
-
-        .header-balance {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 30px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border: 1px solid rgba(243, 156, 18, 0.3);
-        }
-
-        .container {
-            background: var(--bg-card);
-            padding: 25px;
-            border-radius: 25px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            width: 100%;
-            max-width: 400px;
-            box-sizing: border-box;
-            display: none; /* Скрыто по умолчанию */
-        }
-        .container.active { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
+        .container { width: 100%; max-width: 400px; display: none; }
+        .active { display: block; }
+        
         .btn {
-            width: 100%;
-            padding: 15px;
-            margin: 10px 0;
-            border: none;
-            border-radius: 15px;
-            font-size: 18px;
-            font-weight: bold;
-            color: white;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-transform: uppercase;
-            display: flex; align-items: center; justify-content: center; gap: 10px;
+            background: #f39c12; border: none; padding: 15px; width: 100%; 
+            border-radius: 12px; font-size: 18px; font-weight: bold; color: #000;
+            margin: 10px 0; cursor: pointer;
         }
-        .btn:active { transform: scale(0.97); }
-        .btn-primary { background: linear-gradient(to right, var(--primary), var(--secondary)); box-shadow: 0 5px 15px rgba(243, 156, 18, 0.4); }
-        .btn-danger { background: linear-gradient(to right, #c0392b, #962d22); }
-        .btn-back { background: rgba(255, 255, 255, 0.1); margin-bottom: 20px; width: auto; padding: 10px 20px; }
-
-        /* --- МЕНЮ --- */
-        .menu-grid { display: grid; gap: 15px; }
-        .menu-item {
-            background: var(--bg-card); border: 2px solid rgba(255, 255, 255, 0.05);
-            padding: 20px; border-radius: 20px; text-align: center; cursor: pointer;
-            transition: all 0.3s;
-        }
-        .menu-item:hover { border-color: var(--primary); transform: translateY(-5px); }
-        .menu-icon { font-size: 40px; margin-bottom: 10px; }
-
-        /* --- СЛОТЫ С ФОТО --- */
-        .slot-machine-container {
-            background: #000; border-radius: 15px; padding: 15px;
-            border: 3px solid var(--primary);
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
-            overflow: hidden; margin-bottom: 20px;
-        }
-        .slots-window {
-            display: flex; gap: 10px; height: 120px; /* Высота одного фото */
-            overflow: hidden;
-            mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
-        }
-        .reel-column {
-            flex: 1; position: relative;
-            transform: translateY(0); /* Начальная позиция */
-        }
-        /* Класс для анимации вращения */
-        .reel-column.spinning { transition: transform 2.5s cubic-bezier(0.25, 0.1, 0.25, 1); }
-
-        .reel-image {
-            width: 100%; height: 120px; /* Квадратные фото */
+        .btn:active { transform: scale(0.95); }
+        
+        /* КЛИКЕР */
+        .gor-clicker {
+            width: 250px; height: 250px; 
+            border-radius: 50%; border: 5px solid #f39c12;
+            background-image: url('img/gor1.png'); /* ФОТО ГОРА */
             background-size: cover; background-position: center;
-            border-radius: 10px; border: 2px solid rgba(255,255,255,0.1);
-            box-sizing: border-box; display: flex; align-items: center; justify-content: center;
-            font-size: 40px; /* На случай если фото не грузит */
+            margin: 20px auto; transition: transform 0.1s;
+            box-shadow: 0 0 30px rgba(243, 156, 18, 0.5);
         }
+        .gor-clicker:active { transform: scale(0.9); }
 
-        /* --- МИНЫ --- */
-        .mines-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px; }
-        .mine-tile {
-            aspect-ratio: 1; background: rgba(255, 255, 255, 0.1); border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 24px; cursor: pointer; border: 2px solid transparent;
-            transition: all 0.2s;
+        /* МИНЫ */
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin: 20px 0; }
+        .cell {
+            aspect-ratio: 1; background: #333; border-radius: 5px; 
+            display: flex; align-items: center; justify-content: center; font-size: 20px;
         }
-        .mine-tile:active { background: rgba(255, 255, 255, 0.2); }
-        .mine-tile.revealed.safe { background: var(--primary); color: #000; box-shadow: 0 0 15px var(--primary); }
-        .mine-tile.revealed.bomb { background: var(--secondary); box-shadow: 0 0 15px var(--secondary); }
-        .bet-controls { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 15px; }
-        .bet-input { flex: 1; background: transparent; border: none; color: white; font-size: 20px; text-align: center; font-weight: bold; }
-        .multiplier-display { text-align: center; font-size: 24px; color: var(--primary); margin-bottom: 20px; height: 30px; }
-
+        .cell.safe { background: #2ecc71; }
+        .cell.bomb { background: #e74c3c; }
+        
+        .balance { font-size: 20px; margin-bottom: 20px; color: #f39c12; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <audio id="sndClick" src="sounds/click.mp3"></audio>
-    <audio id="sndSpin" src="sounds/spin.mp3"></audio>
-    <audio id="sndWin" src="sounds/win.mp3"></audio>
-    <audio id="sndMine" src="sounds/mine.mp3"></audio>
+    <div class="balance">💰 <span id="bal">0</span> зв.</div>
 
-    <div class="header-balance">
-        💰 Баланс: <span id="userBalance">Загрузка...</span> зв.
+    <div id="menu" class="container active">
+        <h1>GorAM App</h1>
+        <button class="btn" onclick="openGame('clicker')">👆 КЛИКЕР ГОРА</button>
+        <button class="btn" onclick="openGame('mines')">💣 МИНЫ (500x)</button>
     </div>
 
-    <div class="container active" id="menuView">
-        <h1>GorAM Hub</h1>
-        <div class="menu-grid">
-            <div class="menu-item" onclick="showView('slotsView')">
-                <div class="menu-icon">🎰</div>
-                <h2>Gor Slots</h2>
-                <p>Крути фото легенды</p>
-            </div>
-            <div class="menu-item" onclick="showView('minesView')">
-                <div class="menu-icon">💣</div>
-                <h2>Мины</h2>
-                <p>Проверь удачу</p>
-            </div>
-        </div>
+    <div id="clicker" class="container">
+        <button class="btn" onclick="goHome()">🔙 Назад</button>
+        <h1>Тапай Гора!</h1>
+        <div class="gor-clicker" onclick="clickGor()"></div>
+        <h2>Натыкано: <span id="clicks">0</span></h2>
+        <button class="btn" onclick="claimClicks()">💰 ЗАБРАТЬ</button>
     </div>
 
-    <div class="container" id="slotsView">
-        <button class="btn btn-back" onclick="showView('menuView')">⬅️ Назад</button>
-        <h1>📸 Gor Slots 📸</h1>
-        
-        <div class="slot-machine-container">
-            <div class="slots-window">
-                <div class="reel-column" id="reelCol1"></div>
-                <div class="reel-column" id="reelCol2"></div>
-                <div class="reel-column" id="reelCol3"></div>
-            </div>
-        </div>
-
-        <div class="bet-controls">
-            <button class="btn btn-back" onclick="changeSlotBet(-50)">-</button>
-            <input type="number" class="bet-input" id="slotBetInput" value="100" readonly>
-            <button class="btn btn-back" onclick="changeSlotBet(50)">+</button>
-        </div>
-
-        <button class="btn btn-primary" id="spinBtn" onclick="spinSlots()">🎰 КРУТИТЬ!</button>
-        <h2 id="slotStatus" style="height: 30px;">Удачи!</h2>
+    <div id="mines" class="container">
+        <button class="btn" onclick="goHome()">🔙 Назад</button>
+        <h1>Mines 500x</h1>
+        <input type="number" id="bet" value="100" style="width: 100%; padding: 10px; margin-bottom: 10px; font-size: 18px;">
+        <h3 id="mult">x1.00</h3>
+        <div class="grid" id="grid"></div>
+        <button class="btn" id="startBtn" onclick="startMines()">СТАРТ</button>
+        <button class="btn" id="cashoutBtn" onclick="cashout()" style="display:none; background: #27ae60; color: white;">ЗАБРАТЬ</button>
     </div>
 
-    <div class="container" id="minesView">
-         <button class="btn btn-back" onclick="showView('menuView')">⬅️ Назад</button>
-        <h1>💣 МИНЫ</h1>
-        
-        <div class="bet-controls">
-            Ставка: <input type="number" class="bet-input" id="mineBetInput" value="100">
-            Мины: <select class="bet-input" id="minesCount"><option value="3">3</option><option value="5">5</option><option value="10">10</option></select>
-        </div>
-        
-        <div class="multiplier-display" id="mineMult">x1.00</div>
-
-        <div class="mines-grid" id="minesGrid">
-            </div>
-
-        <button class="btn btn-primary" id="mineStartBtn" onclick="startMines()">▶️ НАЧАТЬ ИГРУ</button>
-        <button class="btn btn-primary" id="mineCashoutBtn" style="display: none;" onclick="cashoutMines()">💰 ЗАБРАТЬ (<span id="cashoutAmount">0</span>)</button>
-    </div>
-
+    <audio id="sndPop" src="sounds/click.mp3"></audio>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        tg.enableClosingConfirmation();
-
-        // --- СИНХРОНИЗАЦИЯ ---
-        // Получаем данные из URL (которые передаст бот)
-        const urlParams = new URLSearchParams(window.location.search);
-        let userId = urlParams.get('uid') || 'test_user';
-        let balance = parseInt(urlParams.get('bal')) || 1000; // Баланс по умолчанию для теста
-
-        const balanceEl = document.getElementById('userBalance');
         
-        function updateBalanceDisplay() {
-            balanceEl.innerText = balance;
-            tg.HapticFeedback.selectionChanged();
+        // Парсим URL
+        const params = new URLSearchParams(window.location.search);
+        let uid = params.get('uid');
+        let balance = parseInt(params.get('bal') || 0);
+        document.getElementById('bal').innerText = balance;
+
+        // --- НАВИГАЦИЯ ---
+        function openGame(id) {
+            document.querySelectorAll('.container').forEach(d => d.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
         }
-        updateBalanceDisplay();
+        function goHome() { openGame('menu'); }
 
-        // Функция отправки результата боту
-        function sendResultToBot(game, profit) {
-            balance += profit;
-            updateBalanceDisplay();
-            // Отправляем данные боту, чтобы он записал их в БД
-            const data = JSON.stringify({ action: 'game_result', game: game, profit: profit, uid: userId });
-            tg.sendData(data);
+        // --- КЛИКЕР ---
+        let clicks = 0;
+        function clickGor() {
+            clicks++;
+            document.getElementById('clicks').innerText = clicks;
+            tg.HapticFeedback.impactOccurred('light');
+            // Шанс звука 25%
+            if (Math.random() < 0.25) document.getElementById('sndPop').play().catch(()=>{});
         }
-
-        // ЗВУКИ
-        const sClick = document.getElementById('sndClick');
-        const sSpin = document.getElementById('sndSpin');
-        const sWin = document.getElementById('sndWin');
-        const sMine = document.getElementById('sndMine');
-        function play(snd) { snd.currentTime = 0; snd.play().catch(()=>{}); } // catch для браузеров блокирующих звук
-
-        // НАВИГАЦИЯ
-        function showView(viewId) {
-            play(sClick);
-            document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
-            if(viewId === 'slotsView') initSlotsUI(); // Инициализация слотов при входе
+        function claimClicks() {
+            if (clicks > 0) sendData('game_result', clicks, 'Clicker');
+            clicks = 0; document.getElementById('clicks').innerText = 0;
         }
 
-        // ================= ЛОГИКА СЛОТОВ (С ФОТО) =================
-        // Пути к твоим фото в папке img/
-        const gorPhotos = [
-            'img/gor1.png', // Обычный
-            'img/gor2.png', // Редкий
-            'img/gor3.png', // Эпик
-            'img/gor_wild.png' // Легендарный (Вайлд)
-        ];
-        const IMG_HEIGHT = 120; // Высота одной картинки
-        const SYMBOLS_PER_REEL = 30; // Сколько картинок в "ленте" барабана (для долгого спина)
-
-        let isSpinning = false;
-        const slotBetInput = document.getElementById('slotBetInput');
-        const slotStatus = document.getElementById('slotStatus');
-        const spinBtnEl = document.getElementById('spinBtn');
-        const reelCols = [document.getElementById('reelCol1'), document.getElementById('reelCol2'), document.getElementById('reelCol3')];
-
-        function changeSlotBet(amount) {
-             play(sClick);
-             let current = parseInt(slotBetInput.value);
-             if (current + amount > 0) slotBetInput.value = current + amount;
-        }
-
-        // Заполняем барабаны картинками
-        function initSlotsUI() {
-            reelCols.forEach(col => {
-                col.innerHTML = '';
-                col.classList.remove('spinning');
-                col.style.transform = 'translateY(0px)';
-                // Создаем длинную ленту из случайных фото Гора
-                for (let i = 0; i < SYMBOLS_PER_REEL; i++) {
-                    const imgDiv = document.createElement('div');
-                    imgDiv.className = 'reel-image';
-                    const randomPhoto = gorPhotos[Math.floor(Math.random() * gorPhotos.length)];
-                    imgDiv.style.backgroundImage = `url('${randomPhoto}')`;
-                    col.appendChild(imgDiv);
-                }
-            });
-        }
-
-        function spinSlots() {
-            const bet = parseInt(slotBetInput.value);
-            if (balance < bet || isSpinning) return;
-            
-            isSpinning = true;
-            sendResultToBot('slots_bet', -bet); // Списываем ставку
-            spinBtnEl.disabled = true;
-            slotStatus.innerText = "Крутим Гора...";
-            slotStatus.style.color = "white";
-            play(sSpin);
-
-            // Определяем результат ЗАРАНЕЕ (подкрутка для демо, в реале - честный рандом)
-            // Генерируем 3 конечных индекса фото
-            const finalIndices = [
-                Math.floor(Math.random() * gorPhotos.length),
-                Math.floor(Math.random() * gorPhotos.length),
-                Math.floor(Math.random() * gorPhotos.length)
-            ];
-
-            reelCols.forEach((col, i) => {
-                // Подменяем последнюю картинку в ленте на ту, что должна выпасть
-                const lastImgIndex = SYMBOLS_PER_REEL - 1; // Та, что будет по центру в конце
-                const targetPhotoUrl = gorPhotos[finalIndices[i]];
-                col.children[lastImgIndex].style.backgroundImage = `url('${targetPhotoUrl}')`;
-
-                // Вычисляем, на сколько пикселей сдвинуть ленту вверх
-                // Сдвигаем так, чтобы предпоследняя картинка оказалась в центре окна (окно 120px, центр на 60px)
-                 // Позиция последней картинки: (SYMBOLS_PER_REEL - 1) * IMG_HEIGHT
-                 // Нам нужно, чтобы она встала в позицию Y = 0 относительно окна
-                const targetY = -((SYMBOLS_PER_REEL - 1) * IMG_HEIGHT);
-                
-                // Задержка старта для каждого барабана
-                setTimeout(() => {
-                    col.classList.add('spinning');
-                    col.style.transform = `translateY(${targetY}px)`;
-                }, i * 300);
-            });
-
-            // Проверка результата после окончания анимации (через 2.5с + задержки)
-            setTimeout(() => {
-                checkSlotWin(finalIndices, bet);
-                isSpinning = false;
-                spinBtnEl.disabled = false;
-                sSpin.pause();
-            }, 2500 + 600);
-        }
-
-        function checkSlotWin(indices, bet) {
-            tg.HapticFeedback.impactOccurred('heavy');
-            const s1 = indices[0], s2 = indices[1], s3 = indices[2];
-            let winMult = 0;
-
-            // Логика побед (Упрощенная: 3 одинаковых)
-            if (s1 === s2 && s2 === s3) {
-                // Чем больше индекс фото в массиве gorPhotos, тем круче выигрыш
-                winMult = (s1 + 1) * 10; // x10, x20, x30, x40
-                if (s1 === 3) { // Если выпал Wild (gor_wild.png)
-                     winMult = 100; // ДЖЕКПОТ x100
-                     slotStatus.innerText = "🔥 GOR LEGENDARY JACKPOT! 🔥";
-                     slotStatus.style.color = "var(--secondary)";
-                } else {
-                    slotStatus.innerText = `✅ Тройной Гор! Выигрыш: ${bet * winMult}`;
-                    slotStatus.style.color = "var(--primary)";
-                }
-                play(sWin);
-                tg.HapticFeedback.notificationOccurred('success');
-            } else {
-                slotStatus.innerText = "Попробуй еще раз.";
-            }
-
-            if (winMult > 0) {
-                sendResultToBot('slots_win', bet * winMult);
-            }
-        }
-
-
-        // ================= ЛОГИКА МИН =================
-        const minesGrid = document.getElementById('minesGrid');
-        const mineBetInput = document.getElementById('mineBetInput');
-        const minesCountSelect = document.getElementById('minesCount');
-        const mineStartBtn = document.getElementById('mineStartBtn');
-        const mineCashoutBtn = document.getElementById('mineCashoutBtn');
-        const mineMultEl = document.getElementById('mineMult');
-        const cashoutAmountEl = document.getElementById('cashoutAmount');
-
-        let mineGameActive = false;
+        // --- МИНЫ (500x Logic) ---
+        let mineActive = false;
         let mineMap = [];
-        let currentMineBet = 0;
-        let steps = 0;
+        let currentBet = 0;
         let currentMult = 1.0;
-
-        function initMinesGrid() {
-            minesGrid.innerHTML = '';
-            for(let i=0; i<25; i++) {
-                const tile = document.createElement('div');
-                tile.className = 'mine-tile';
-                tile.dataset.index = i;
-                tile.innerText = '❓';
-                tile.onclick = () => tileClick(i);
-                minesGrid.appendChild(tile);
-            }
-        }
-        initMinesGrid(); // Сразу рисуем поле
+        let steps = 0;
 
         function startMines() {
-            const bet = parseInt(mineBetInput.value);
-            if (balance < bet || mineGameActive) return;
-            play(sClick);
-
-            currentMineBet = bet;
-            sendResultToBot('mines_bet', -bet);
-            mineGameActive = true;
-            steps = 0;
-            currentMult = 1.0;
-            mineMultEl.innerText = "x1.00";
+            let bet = parseInt(document.getElementById('bet').value);
+            if (balance < bet) return alert("Мало денег!");
             
-            mineStartBtn.style.display = 'none';
-            mineCashoutBtn.style.display = 'inline-flex';
-            mineBetInput.disabled = true;
-            minesCountSelect.disabled = true;
+            sendData('game_result', -bet, 'Mines Bet'); // Списываем ставку сразу
+            balance -= bet; 
+            document.getElementById('bal').innerText = balance;
 
-            // Генерация мин
-            const minesCount = parseInt(minesCountSelect.value);
-            mineMap = Array(25).fill('safe');
-            let placed = 0;
-            while(placed < minesCount) {
-                let idx = Math.floor(Math.random() * 25);
-                if(mineMap[idx] === 'safe') { mineMap[idx] = 'bomb'; placed++; }
-            }
+            currentBet = bet;
+            mineActive = true;
+            currentMult = 1.0;
+            steps = 0;
+            
+            // Генерация поля (3 бомбы)
+            mineMap = Array(25).fill(0);
+            for(let i=0; i<3; i++) mineMap[i] = 1;
+            mineMap.sort(() => Math.random() - 0.5);
 
-            // Очистка поля визуально
-            document.querySelectorAll('.mine-tile').forEach(t => {
-                t.className = 'mine-tile';
-                t.innerText = '❓';
-            });
+            renderGrid();
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('cashoutBtn').style.display = 'block';
+            document.getElementById('mult').innerText = "x1.00";
         }
 
-        function tileClick(idx) {
-            if(!mineGameActive) return;
-            const tile = minesGrid.children[idx];
-            if(tile.classList.contains('revealed')) return;
+        function renderGrid() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            for(let i=0; i<25; i++) {
+                let d = document.createElement('div');
+                d.className = 'cell';
+                d.innerText = '❓';
+                d.onclick = () => checkTile(i, d);
+                grid.appendChild(d);
+            }
+        }
 
-            tg.HapticFeedback.impactOccurred('light');
+        function checkTile(i, el) {
+            if (!mineActive || el.classList.contains('safe')) return;
 
-            if(mineMap[idx] === 'bomb') {
-                // ВЗРЫВ
-                play(sMine);
-                tile.classList.add('revealed', 'bomb');
-                tile.innerText = '💥';
-                gameOverMines(false);
-            } else {
-                // БЕЗОПАСНО
-                play(sClick);
-                tile.classList.add('revealed', 'safe');
-                tile.innerText = '💎';
+            if (mineMap[i] === 1) { // БОМБА
+                el.classList.add('bomb');
+                el.innerText = '💣';
+                endMines(false);
+            } else { // УСПЕХ
+                el.classList.add('safe');
+                el.innerText = '💎';
                 steps++;
-                calculateMult();
+                // Формула 500x: Если открыл 22 клетки (все кроме бомб)
+                if (steps === 22) currentMult = 500.0; 
+                else currentMult *= 1.25; // Растем
+                
+                document.getElementById('mult').innerText = `x${currentMult.toFixed(2)}`;
             }
         }
 
-        function calculateMult() {
-             const mines = parseInt(minesCountSelect.value);
-             // Простая формула множителя. Чем больше мин и шагов, тем выше.
-             // (Это примерная формула, в реальных казино сложнее)
-             let stepMult = 1.0 + (mines / 25) * 1.5; 
-             currentMult *= stepMult;
-             
-             mineMultEl.innerText = `x${currentMult.toFixed(2)}`;
-             cashoutAmountEl.innerText = Math.floor(currentMineBet * currentMult);
+        function cashout() {
+            if (!mineActive) return;
+            let win = Math.floor(currentBet * currentMult);
+            sendData('game_result', win, 'Mines Win');
+            balance += win;
+            document.getElementById('bal').innerText = balance;
+            endMines(true);
         }
 
-        function cashoutMines() {
-            if(!mineGameActive || steps === 0) return;
-            play(sWin);
-            const win = Math.floor(currentMineBet * currentMult);
-            sendResultToBot('mines_win', win);
-            gameOverMines(true);
+        function endMines(won) {
+            mineActive = false;
+            document.getElementById('startBtn').style.display = 'block';
+            document.getElementById('cashoutBtn').style.display = 'none';
+            if (!won) alert("ВЗРЫВ!");
         }
 
-        function gameOverMines(won) {
-            mineGameActive = false;
-            mineStartBtn.style.display = 'inline-flex';
-            mineCashoutBtn.style.display = 'none';
-            mineBetInput.disabled = false;
-            minesCountSelect.disabled = false;
-
-            if (won) {
-                tg.HapticFeedback.notificationOccurred('success');
-                mineMultEl.innerText = `ЗАБРАЛ: ${Math.floor(currentMineBet * currentMult)}`;
-            } else {
-                tg.HapticFeedback.notificationOccurred('error');
-                mineMultEl.innerText = "ВЗРЫВ!";
-                 // Показать все мины
-                mineMap.forEach((type, idx) => {
-                    if(type === 'bomb') {
-                         minesGrid.children[idx].classList.add('revealed', 'bomb');
-                         minesGrid.children[idx].innerText = '💣';
-                    }
-                });
-            }
+        function sendData(action, profit, gameName) {
+            tg.sendData(JSON.stringify({ action, profit, game: gameName }));
         }
-
     </script>
 </body>
 </html>
