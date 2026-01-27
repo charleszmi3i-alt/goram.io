@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GorAM Slots</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            background-color: #121212;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+
+        h1 { color: #f1c40f; margin-bottom: 10px; text-shadow: 0 0 10px #f1c40f; }
+
+        .slot-machine {
+            background: #2c3e50;
+            padding: 20px;
+            border-radius: 15px;
+            border: 4px solid #f39c12;
+            box-shadow: 0 0 30px rgba(243, 156, 18, 0.5);
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .reel {
+            width: 80px;
+            height: 100px;
+            background: white;
+            border-radius: 10px;
+            font-size: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.1s;
+            width: 80%;
+            margin-bottom: 15px;
+        }
+
+        .btn-spin {
+            background: linear-gradient(to bottom, #e74c3c, #c0392b);
+            color: white;
+            box-shadow: 0 5px 0 #962d22;
+        }
+        .btn-spin:active { transform: translateY(5px); box-shadow: none; }
+        .btn-spin:disabled { background: #555; box-shadow: none; color: #999; }
+
+        .btn-claim {
+            background: #27ae60;
+            color: white;
+            display: none; /* Скрыта пока не выиграешь */
+        }
+
+        .status {
+            height: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #bdc3c7;
+            margin-bottom: 20px;
+        }
+        
+        .win-anim { animation: pulse 0.5s infinite; color: #2ecc71; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <h1>🎰 GOR CASINO 🎰</h1>
+    
+    <div class="slot-machine">
+        <div class="reel" id="reel1">🍒</div>
+        <div class="reel" id="reel2">🍒</div>
+        <div class="reel" id="reel3">🍒</div>
+    </div>
+
+    <div class="status" id="status">Нажми SPIN!</div>
+
+    <button class="btn btn-spin" id="spinBtn" onclick="spin()">КРУТИТЬ (Бесплатно)</button>
+    <button class="btn btn-claim" id="claimBtn" onclick="claim()">💰 ЗАБРАТЬ: <span id="winAmount">0</span></button>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+
+        const symbols = ["🍒", "🍋", "🍇", "💎", "7️⃣"];
+        const reels = [document.getElementById('reel1'), document.getElementById('reel2'), document.getElementById('reel3')];
+        const statusEl = document.getElementById('status');
+        const spinBtn = document.getElementById('spinBtn');
+        const claimBtn = document.getElementById('claimBtn');
+        const winAmountEl = document.getElementById('winAmount');
+
+        let currentWin = 0;
+
+        function getRandomSymbol() {
+            return symbols[Math.floor(Math.random() * symbols.length)];
+        }
+
+        function spin() {
+            // Сброс
+            currentWin = 0;
+            claimBtn.style.display = 'none';
+            spinBtn.disabled = true;
+            statusEl.innerText = "Крутим...";
+            statusEl.classList.remove('win-anim');
+            
+            tg.HapticFeedback.impactOccurred('medium'); // Вибрация
+
+            // Анимация вращения (меняем символы быстро)
+            let iterations = 20; 
+            let count = 0;
+            
+            let interval = setInterval(() => {
+                reels.forEach(reel => reel.innerText = getRandomSymbol());
+                count++;
+                if (count > iterations) {
+                    clearInterval(interval);
+                    stopReels();
+                }
+            }, 100);
+        }
+
+        function stopReels() {
+            // Определяем конечный результат (здесь можно подкрутить шансы)
+            const results = [getRandomSymbol(), getRandomSymbol(), getRandomSymbol()];
+            
+            // Отрисовка
+            reels[0].innerText = results[0];
+            reels[1].innerText = results[1];
+            reels[2].innerText = results[2];
+
+            checkWin(results);
+            spinBtn.disabled = false;
+        }
+
+        function checkWin(res) {
+            let win = 0;
+            
+            // 3 одинаковых
+            if (res[0] === res[1] && res[1] === res[2]) {
+                if (res[0] === "7️⃣") win = 500;
+                else if (res[0] === "💎") win = 300;
+                else win = 150;
+                statusEl.innerText = "🔥 ДЖЕКПОТ! 🔥";
+                statusEl.classList.add('win-anim');
+                tg.HapticFeedback.notificationOccurred('success');
+            }
+            // 2 одинаковых
+            else if (res[0] === res[1] || res[1] === res[2] || res[0] === res[2]) {
+                win = 30;
+                statusEl.innerText = "✅ Хорошо! Пара!";
+            } else {
+                statusEl.innerText = "❌ Попробуй еще раз";
+            }
+
+            if (win > 0) {
+                currentWin = win;
+                winAmountEl.innerText = win;
+                claimBtn.style.display = 'block'; // Показываем кнопку "Забрать"
+                spinBtn.style.display = 'none'; // Прячем кнопку Spin
+            }
+        }
+
+        function claim() {
+            if (currentWin > 0) {
+                const data = JSON.stringify({ action: "casino_win", amount: currentWin });
+                tg.sendData(data);
+            }
+        }
+    </script>
+</body>
+</html>
