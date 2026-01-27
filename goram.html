@@ -177,7 +177,7 @@
             totalClicks: 0,
             clickPower: 1,
             autoClick: 0,
-            skinIndex: 1, // 1-4
+            skinIndex: 1,
             upgrades: {
                 multitap: { level: 0, baseCost: 50, name: "Мультиклик", desc: "+1 за клик" },
                 energy:   { level: 0, baseCost: 300, name: "Энергетик", desc: "+5 за клик" },
@@ -188,10 +188,8 @@
             }
         };
 
-        // Картинки
         const skins = ['img/gor1.png', 'img/gor2.png', 'img/gor3.png', 'img/gor4.png'];
         
-        // Аудио
         const sounds = {
             click: document.getElementById('sndClick'),
             buy: document.getElementById('sndBuy'),
@@ -204,47 +202,42 @@
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
-                    // Объединяем, чтобы новые апгрейды не ломали старые сейвы
                     gameState = { ...gameState, ...parsed, upgrades: { ...gameState.upgrades, ...parsed.upgrades } };
                 } catch (e) { console.error("Save Error", e); }
             }
-            // Синхронизация с ботом (если бот передал баланс в URL)
             const urlParams = new URLSearchParams(window.location.search);
             const botBal = parseInt(urlParams.get('bal'));
             if (!isNaN(botBal) && botBal > gameState.balance) {
-                // Если в боте денег больше (например, выиграл в казино), обновляем
                 gameState.balance = botBal;
             }
             
             updateUI();
             updateShopUI();
-            changeSkin(gameState.skinIndex - 1); // Восстановить скин
+            changeSkin(gameState.skinIndex - 1);
         }
 
         function saveGame() {
             localStorage.setItem('goram_save_v2', JSON.stringify(gameState));
         }
 
-        setInterval(saveGame, 2000); // Автосохранение каждые 2 сек
+        setInterval(saveGame, 2000);
 
         // === ИГРОВАЯ ЛОГИКА ===
         
         function clickAction(e) {
-            // Звук (с шансом 100% на первый клик, потом рандом если частые)
-            if(sounds.click.paused) {
-                sounds.click.currentTime = 0;
-                sounds.click.play().catch(()=>{});
-            } else if (Math.random() > 0.5) {
-                const clone = sounds.click.cloneNode();
-                clone.play().catch(()=>{});
-            }
-
             // Расчет силы
             let power = (1 + gameState.upgrades.multitap.level + (gameState.upgrades.energy.level * 5));
             if (gameState.upgrades.triple.level > 0) power *= 3;
 
             gameState.balance += power;
             gameState.totalClicks++;
+
+            // --- ЗВУК (Только каждый 20-й клик) ---
+            if (gameState.totalClicks % 20 === 0) {
+                sounds.click.currentTime = 0;
+                sounds.click.play().catch(()=>{});
+            }
+            // -------------------------------------
 
             // Визуал
             tg.HapticFeedback.impactOccurred('medium');
@@ -273,7 +266,7 @@
             const idx = Math.floor(Math.random() * skins.length);
             gameState.skinIndex = idx + 1;
             changeSkin(idx);
-            sounds.lvl.play().catch(()=>{}); // Звук смены
+            sounds.lvl.play().catch(()=>{});
             tg.HapticFeedback.notificationOccurred('success');
         }
 
@@ -284,7 +277,6 @@
         // === МАГАЗИН ===
         function getCost(key) {
             const upg = gameState.upgrades[key];
-            // Формула цены: База * 1.5 ^ Уровень
             return Math.floor(upg.baseCost * Math.pow(1.5, upg.level));
         }
 
@@ -293,12 +285,11 @@
             const upg = gameState.upgrades[key];
 
             if (gameState.balance >= cost) {
-                if (upg.max && upg.level >= upg.max) return; // Лимит
+                if (upg.max && upg.level >= upg.max) return;
 
                 gameState.balance -= cost;
                 upg.level++;
                 
-                // Применяем эффект
                 if (key === 'auto1') gameState.autoClick += 2;
                 if (key === 'auto2') gameState.autoClick += 15;
                 if (key === 'auto3') gameState.autoClick += 100;
@@ -363,7 +354,7 @@
                     
                     if (isMax) {
                         btn.disabled = true;
-                        btn.style.background = "#2ecc71"; // Зеленый если макс
+                        btn.style.background = "#2ecc71";
                     } else if (gameState.balance < cost) {
                         btn.disabled = true;
                         btn.style.opacity = "0.5";
@@ -378,31 +369,17 @@
         // === ОТПРАВКА В БОТА ===
         function sendToBot() {
             if (gameState.balance < 1) return;
-            // Отправляем весь баланс боту и обнуляем локальный (или просто синхронизируем)
-            // Здесь мы реализуем логику "Снятия": забираем все из кликера в бота
             const amount = Math.floor(gameState.balance);
             
             tg.showConfirm(`Вывести ${amount} звезд в бота?`, (ok) => {
                 if(ok) {
                     const data = JSON.stringify({ action: 'game_result', profit: amount, game: 'Tycoon Withdraw' });
                     tg.sendData(data);
-                    // После успешного вывода можно обнулить баланс в кликере, если хочешь
-                    // gameState.balance = 0; 
-                    // saveGame();
-                    // updateUI();
-                    // Но обычно игроки хотят копить дальше.
-                    // Если ты хочешь ПРОСТО СОХРАНИТЬ в бота, но оставить в кликере:
-                    // Бот должен понимать action: 'sync' (но у нас пока только game_result).
-                    // Для простоты: Кнопка "В БОТА" просто начисляет баланс в бота как Бонус.
-                    // Чтобы не было дюпа, нужно сложная синхронизация.
-                    // ДАВАЙ СДЕЛАЕМ ТАК: Кнопка просто отправляет текущий прогресс, бот его пишет.
                 }
             });
         }
 
-        // Старт
         loadGame();
-
     </script>
 </body>
 </html>
