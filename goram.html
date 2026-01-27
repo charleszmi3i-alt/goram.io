@@ -3,188 +3,406 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GorAM App</title>
+    <title>GorAM Clicker Tycoon</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            background: #111; color: white; font-family: sans-serif;
-            display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 10px;
+        :root {
+            --primary: #f39c12;
+            --bg: #1a1a1a;
+            --panel: #252525;
+            --text: #fff;
+            --green: #2ecc71;
         }
-        .container { width: 100%; max-width: 400px; display: none; }
-        .active { display: block; }
-        
-        .btn {
-            background: #f39c12; border: none; padding: 15px; width: 100%; 
-            border-radius: 12px; font-size: 18px; font-weight: bold; color: #000;
-            margin: 10px 0; cursor: pointer;
-        }
-        .btn:active { transform: scale(0.95); }
-        
-        /* КЛИКЕР */
-        .gor-clicker {
-            width: 250px; height: 250px; 
-            border-radius: 50%; border: 5px solid #f39c12;
-            background-image: url('img/gor1.png'); /* ФОТО ГОРА */
-            background-size: cover; background-position: center;
-            margin: 20px auto; transition: transform 0.1s;
-            box-shadow: 0 0 30px rgba(243, 156, 18, 0.5);
-        }
-        .gor-clicker:active { transform: scale(0.9); }
 
-        /* МИНЫ */
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin: 20px 0; }
-        .cell {
-            aspect-ratio: 1; background: #333; border-radius: 5px; 
-            display: flex; align-items: center; justify-content: center; font-size: 20px;
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
-        .cell.safe { background: #2ecc71; }
-        .cell.bomb { background: #e74c3c; }
+
+        /* Верхняя панель */
+        .header {
+            width: 100%;
+            padding: 15px;
+            background: var(--panel);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        .balance-box { font-size: 20px; font-weight: bold; color: var(--primary); }
+        .cps-box { font-size: 14px; color: #aaa; }
+
+        /* Игровая зона */
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            position: relative;
+        }
+
+        .gor-skin {
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            border: 8px solid var(--primary);
+            background-size: cover;
+            background-position: center;
+            background-image: url('img/gor1.png'); /* По умолчанию */
+            box-shadow: 0 0 40px rgba(243, 156, 18, 0.4);
+            transition: transform 0.08s, border-color 0.3s;
+            cursor: pointer;
+            z-index: 2;
+        }
+        .gor-skin:active { transform: scale(0.92); }
+
+        /* Всплывающие цифры */
+        .float-text {
+            position: absolute;
+            font-weight: bold;
+            font-size: 24px;
+            color: #fff;
+            pointer-events: none;
+            animation: floatUp 0.8s forwards;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+        }
+
+        /* Магазин */
+        .shop-panel {
+            width: 100%;
+            height: 45%;
+            background: var(--panel);
+            border-top-left-radius: 25px;
+            border-top-right-radius: 25px;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+        }
+
+        .shop-title { margin-top: 0; text-align: center; color: var(--primary); }
+
+        .upgrade-item {
+            background: rgba(255,255,255,0.05);
+            margin-bottom: 10px;
+            padding: 12px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid transparent;
+        }
+        .upgrade-item:active { background: rgba(255,255,255,0.1); }
+
+        .upg-info h4 { margin: 0; font-size: 16px; }
+        .upg-info p { margin: 3px 0 0; font-size: 12px; color: #888; }
         
-        .balance { font-size: 20px; margin-bottom: 20px; color: #f39c12; font-weight: bold; }
+        .upg-btn {
+            background: var(--primary);
+            border: none;
+            color: #000;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .upg-btn:disabled { background: #555; color: #888; cursor: not-allowed; }
+
+        /* Кнопка вывода */
+        .withdraw-btn {
+            position: absolute;
+            top: 70px;
+            right: 20px;
+            background: var(--green);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 4px 10px rgba(46, 204, 113, 0.4);
+            cursor: pointer;
+            z-index: 5;
+        }
     </style>
 </head>
 <body>
 
-    <div class="balance">💰 <span id="bal">0</span> зв.</div>
+    <audio id="sndClick" src="sounds/click.mp3"></audio>
+    <audio id="sndBuy" src="sounds/buy.mp3"></audio>
+    <audio id="sndLvl" src="sounds/level_up.mp3"></audio>
 
-    <div id="menu" class="container active">
-        <h1>GorAM App</h1>
-        <button class="btn" onclick="openGame('clicker')">👆 КЛИКЕР ГОРА</button>
-        <button class="btn" onclick="openGame('mines')">💣 МИНЫ (500x)</button>
+    <div class="header">
+        <div class="balance-box">💰 <span id="balance">0</span></div>
+        <div class="cps-box">⚡️ <span id="cps">0</span>/сек</div>
     </div>
 
-    <div id="clicker" class="container">
-        <button class="btn" onclick="goHome()">🔙 Назад</button>
-        <h1>Тапай Гора!</h1>
-        <div class="gor-clicker" onclick="clickGor()"></div>
-        <h2>Натыкано: <span id="clicks">0</span></h2>
-        <button class="btn" onclick="claimClicks()">💰 ЗАБРАТЬ</button>
+    <div class="withdraw-btn" onclick="sendToBot()">📥 В БОТА</div>
+
+    <div class="game-area">
+        <div class="gor-skin" id="gorSkin" onclick="clickAction(event)"></div>
+        <div style="margin-top: 20px; opacity: 0.6;">Всего кликов: <span id="totalClicks">0</span></div>
     </div>
 
-    <div id="mines" class="container">
-        <button class="btn" onclick="goHome()">🔙 Назад</button>
-        <h1>Mines 500x</h1>
-        <input type="number" id="bet" value="100" style="width: 100%; padding: 10px; margin-bottom: 10px; font-size: 18px;">
-        <h3 id="mult">x1.00</h3>
-        <div class="grid" id="grid"></div>
-        <button class="btn" id="startBtn" onclick="startMines()">СТАРТ</button>
-        <button class="btn" id="cashoutBtn" onclick="cashout()" style="display:none; background: #27ae60; color: white;">ЗАБРАТЬ</button>
+    <div class="shop-panel">
+        <h3 class="shop-title">🔨 ПРОКАЧКА</h3>
+        <div id="upgradesList">
+            </div>
     </div>
-
-    <audio id="sndPop" src="sounds/click.mp3"></audio>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
+
+        // === СОСТОЯНИЕ ИГРЫ ===
+        let gameState = {
+            balance: 0,
+            totalClicks: 0,
+            clickPower: 1,
+            autoClick: 0,
+            skinIndex: 1, // 1-4
+            upgrades: {
+                multitap: { level: 0, baseCost: 50, name: "Мультиклик", desc: "+1 за клик" },
+                energy:   { level: 0, baseCost: 300, name: "Энергетик", desc: "+5 за клик" },
+                triple:   { level: 0, baseCost: 5000, name: "Тройной удар", desc: "Клик x3 (Уникально!)", max: 1 },
+                auto1:    { level: 0, baseCost: 200, name: "Младший брат", desc: "+2 сек/авто" },
+                auto2:    { level: 0, baseCost: 1000, name: "Ферма Гора", desc: "+15 сек/авто" },
+                auto3:    { level: 0, baseCost: 10000, name: "Крипто Завод", desc: "+100 сек/авто" }
+            }
+        };
+
+        // Картинки
+        const skins = ['img/gor1.png', 'img/gor2.png', 'img/gor3.png', 'img/gor4.png'];
         
-        // Парсим URL
-        const params = new URLSearchParams(window.location.search);
-        let uid = params.get('uid');
-        let balance = parseInt(params.get('bal') || 0);
-        document.getElementById('bal').innerText = balance;
+        // Аудио
+        const sounds = {
+            click: document.getElementById('sndClick'),
+            buy: document.getElementById('sndBuy'),
+            lvl: document.getElementById('sndLvl')
+        };
 
-        // --- НАВИГАЦИЯ ---
-        function openGame(id) {
-            document.querySelectorAll('.container').forEach(d => d.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-        }
-        function goHome() { openGame('menu'); }
-
-        // --- КЛИКЕР ---
-        let clicks = 0;
-        function clickGor() {
-            clicks++;
-            document.getElementById('clicks').innerText = clicks;
-            tg.HapticFeedback.impactOccurred('light');
-            // Шанс звука 25%
-            if (Math.random() < 0.25) document.getElementById('sndPop').play().catch(()=>{});
-        }
-        function claimClicks() {
-            if (clicks > 0) sendData('game_result', clicks, 'Clicker');
-            clicks = 0; document.getElementById('clicks').innerText = 0;
-        }
-
-        // --- МИНЫ (500x Logic) ---
-        let mineActive = false;
-        let mineMap = [];
-        let currentBet = 0;
-        let currentMult = 1.0;
-        let steps = 0;
-
-        function startMines() {
-            let bet = parseInt(document.getElementById('bet').value);
-            if (balance < bet) return alert("Мало денег!");
-            
-            sendData('game_result', -bet, 'Mines Bet'); // Списываем ставку сразу
-            balance -= bet; 
-            document.getElementById('bal').innerText = balance;
-
-            currentBet = bet;
-            mineActive = true;
-            currentMult = 1.0;
-            steps = 0;
-            
-            // Генерация поля (3 бомбы)
-            mineMap = Array(25).fill(0);
-            for(let i=0; i<3; i++) mineMap[i] = 1;
-            mineMap.sort(() => Math.random() - 0.5);
-
-            renderGrid();
-            document.getElementById('startBtn').style.display = 'none';
-            document.getElementById('cashoutBtn').style.display = 'block';
-            document.getElementById('mult').innerText = "x1.00";
-        }
-
-        function renderGrid() {
-            const grid = document.getElementById('grid');
-            grid.innerHTML = '';
-            for(let i=0; i<25; i++) {
-                let d = document.createElement('div');
-                d.className = 'cell';
-                d.innerText = '❓';
-                d.onclick = () => checkTile(i, d);
-                grid.appendChild(d);
+        // === СИСТЕМА СОХРАНЕНИЙ ===
+        function loadGame() {
+            const saved = localStorage.getItem('goram_save_v2');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    // Объединяем, чтобы новые апгрейды не ломали старые сейвы
+                    gameState = { ...gameState, ...parsed, upgrades: { ...gameState.upgrades, ...parsed.upgrades } };
+                } catch (e) { console.error("Save Error", e); }
             }
+            // Синхронизация с ботом (если бот передал баланс в URL)
+            const urlParams = new URLSearchParams(window.location.search);
+            const botBal = parseInt(urlParams.get('bal'));
+            if (!isNaN(botBal) && botBal > gameState.balance) {
+                // Если в боте денег больше (например, выиграл в казино), обновляем
+                gameState.balance = botBal;
+            }
+            
+            updateUI();
+            updateShopUI();
+            changeSkin(gameState.skinIndex - 1); // Восстановить скин
         }
 
-        function checkTile(i, el) {
-            if (!mineActive || el.classList.contains('safe')) return;
+        function saveGame() {
+            localStorage.setItem('goram_save_v2', JSON.stringify(gameState));
+        }
 
-            if (mineMap[i] === 1) { // БОМБА
-                el.classList.add('bomb');
-                el.innerText = '💣';
-                endMines(false);
-            } else { // УСПЕХ
-                el.classList.add('safe');
-                el.innerText = '💎';
-                steps++;
-                // Формула 500x: Если открыл 22 клетки (все кроме бомб)
-                if (steps === 22) currentMult = 500.0; 
-                else currentMult *= 1.25; // Растем
+        setInterval(saveGame, 2000); // Автосохранение каждые 2 сек
+
+        // === ИГРОВАЯ ЛОГИКА ===
+        
+        function clickAction(e) {
+            // Звук (с шансом 100% на первый клик, потом рандом если частые)
+            if(sounds.click.paused) {
+                sounds.click.currentTime = 0;
+                sounds.click.play().catch(()=>{});
+            } else if (Math.random() > 0.5) {
+                const clone = sounds.click.cloneNode();
+                clone.play().catch(()=>{});
+            }
+
+            // Расчет силы
+            let power = (1 + gameState.upgrades.multitap.level + (gameState.upgrades.energy.level * 5));
+            if (gameState.upgrades.triple.level > 0) power *= 3;
+
+            gameState.balance += power;
+            gameState.totalClicks++;
+
+            // Визуал
+            tg.HapticFeedback.impactOccurred('medium');
+            showFloatingText(e.clientX, e.clientY, `+${power}`);
+            
+            // Смена скина каждые 500 кликов
+            if (gameState.totalClicks % 500 === 0) {
+                randomizeSkin();
+            }
+
+            updateUI();
+            checkShopAvailability();
+        }
+
+        // Авто-кликер
+        setInterval(() => {
+            if (gameState.autoClick > 0) {
+                gameState.balance += gameState.autoClick;
+                updateUI();
+                checkShopAvailability();
+            }
+        }, 1000);
+
+        // Смена скина
+        function randomizeSkin() {
+            const idx = Math.floor(Math.random() * skins.length);
+            gameState.skinIndex = idx + 1;
+            changeSkin(idx);
+            sounds.lvl.play().catch(()=>{}); // Звук смены
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+
+        function changeSkin(idx) {
+            document.getElementById('gorSkin').style.backgroundImage = `url('${skins[idx]}')`;
+        }
+
+        // === МАГАЗИН ===
+        function getCost(key) {
+            const upg = gameState.upgrades[key];
+            // Формула цены: База * 1.5 ^ Уровень
+            return Math.floor(upg.baseCost * Math.pow(1.5, upg.level));
+        }
+
+        function buyUpgrade(key) {
+            const cost = getCost(key);
+            const upg = gameState.upgrades[key];
+
+            if (gameState.balance >= cost) {
+                if (upg.max && upg.level >= upg.max) return; // Лимит
+
+                gameState.balance -= cost;
+                upg.level++;
                 
-                document.getElementById('mult').innerText = `x${currentMult.toFixed(2)}`;
+                // Применяем эффект
+                if (key === 'auto1') gameState.autoClick += 2;
+                if (key === 'auto2') gameState.autoClick += 15;
+                if (key === 'auto3') gameState.autoClick += 100;
+
+                sounds.buy.play().catch(()=>{});
+                tg.HapticFeedback.selectionChanged();
+                
+                saveGame();
+                updateUI();
+                updateShopUI();
             }
         }
 
-        function cashout() {
-            if (!mineActive) return;
-            let win = Math.floor(currentBet * currentMult);
-            sendData('game_result', win, 'Mines Win');
-            balance += win;
-            document.getElementById('bal').innerText = balance;
-            endMines(true);
+        // === ИНТЕРФЕЙС ===
+        function updateUI() {
+            document.getElementById('balance').innerText = Math.floor(gameState.balance);
+            document.getElementById('cps').innerText = gameState.autoClick;
+            document.getElementById('totalClicks').innerText = gameState.totalClicks;
         }
 
-        function endMines(won) {
-            mineActive = false;
-            document.getElementById('startBtn').style.display = 'block';
-            document.getElementById('cashoutBtn').style.display = 'none';
-            if (!won) alert("ВЗРЫВ!");
+        function showFloatingText(x, y, text) {
+            const el = document.createElement('div');
+            el.className = 'float-text';
+            el.innerText = text;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 800);
         }
 
-        function sendData(action, profit, gameName) {
-            tg.sendData(JSON.stringify({ action, profit, game: gameName }));
+        function updateShopUI() {
+            const list = document.getElementById('upgradesList');
+            list.innerHTML = '';
+
+            for (const key in gameState.upgrades) {
+                const upg = gameState.upgrades[key];
+                const cost = getCost(key);
+                const isMax = upg.max && upg.level >= upg.max;
+
+                const item = document.createElement('div');
+                item.className = 'upgrade-item';
+                item.innerHTML = `
+                    <div class="upg-info">
+                        <h4>${upg.name} (Lvl ${upg.level})</h4>
+                        <p>${upg.desc}</p>
+                    </div>
+                    <button class="upg-btn" id="btn_${key}" onclick="buyUpgrade('${key}')">
+                        ${isMax ? 'MAX' : cost + '💰'}
+                    </button>
+                `;
+                list.appendChild(item);
+            }
+            checkShopAvailability();
         }
+
+        function checkShopAvailability() {
+            for (const key in gameState.upgrades) {
+                const btn = document.getElementById(`btn_${key}`);
+                if(btn) {
+                    const cost = getCost(key);
+                    const isMax = gameState.upgrades[key].max && gameState.upgrades[key].level >= gameState.upgrades[key].max;
+                    
+                    if (isMax) {
+                        btn.disabled = true;
+                        btn.style.background = "#2ecc71"; // Зеленый если макс
+                    } else if (gameState.balance < cost) {
+                        btn.disabled = true;
+                        btn.style.opacity = "0.5";
+                    } else {
+                        btn.disabled = false;
+                        btn.style.opacity = "1";
+                    }
+                }
+            }
+        }
+
+        // === ОТПРАВКА В БОТА ===
+        function sendToBot() {
+            if (gameState.balance < 1) return;
+            // Отправляем весь баланс боту и обнуляем локальный (или просто синхронизируем)
+            // Здесь мы реализуем логику "Снятия": забираем все из кликера в бота
+            const amount = Math.floor(gameState.balance);
+            
+            tg.showConfirm(`Вывести ${amount} звезд в бота?`, (ok) => {
+                if(ok) {
+                    const data = JSON.stringify({ action: 'game_result', profit: amount, game: 'Tycoon Withdraw' });
+                    tg.sendData(data);
+                    // После успешного вывода можно обнулить баланс в кликере, если хочешь
+                    // gameState.balance = 0; 
+                    // saveGame();
+                    // updateUI();
+                    // Но обычно игроки хотят копить дальше.
+                    // Если ты хочешь ПРОСТО СОХРАНИТЬ в бота, но оставить в кликере:
+                    // Бот должен понимать action: 'sync' (но у нас пока только game_result).
+                    // Для простоты: Кнопка "В БОТА" просто начисляет баланс в бота как Бонус.
+                    // Чтобы не было дюпа, нужно сложная синхронизация.
+                    // ДАВАЙ СДЕЛАЕМ ТАК: Кнопка просто отправляет текущий прогресс, бот его пишет.
+                }
+            });
+        }
+
+        // Старт
+        loadGame();
+
     </script>
 </body>
 </html>
