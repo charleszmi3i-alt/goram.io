@@ -3,383 +3,265 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GorAM Clicker Tycoon</title>
+    <title>GorAM Hardcore</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --primary: #f39c12;
-            --bg: #1a1a1a;
-            --panel: #252525;
-            --text: #fff;
-            --green: #2ecc71;
-        }
-
         body {
-            background-color: var(--bg);
-            color: var(--text);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            overflow: hidden;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
+            background-color: #121212; color: white; font-family: sans-serif;
+            display: flex; flex-direction: column; align-items: center;
+            height: 100vh; margin: 0; user-select: none;
+            transition: background 0.3s;
+        }
+        /* РЕЖИМ ЯРОСТИ */
+        body.rage {
+            background-color: #4a0000;
+            animation: shake 0.5s infinite;
+        }
+        @keyframes shake {
+            0% { transform: translate(0,0); }
+            25% { transform: translate(2px, 2px); }
+            50% { transform: translate(-2px, -2px); }
+            75% { transform: translate(2px, -2px); }
+            100% { transform: translate(0,0); }
         }
 
-        /* Верхняя панель */
         .header {
-            width: 100%;
-            padding: 15px;
-            background: var(--panel);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-sizing: border-box;
-            z-index: 10;
+            width: 100%; padding: 15px; background: #222;
+            display: flex; justify-content: space-between; 
+            font-size: 20px; font-weight: bold; border-bottom: 2px solid orange;
         }
+        #bal { color: orange; }
 
-        .balance-box { font-size: 20px; font-weight: bold; color: var(--primary); }
-        .cps-box { font-size: 14px; color: #aaa; }
-
-        /* Игровая зона */
         .game-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            position: relative;
+            flex: 1; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; width: 100%;
         }
 
         .gor-skin {
-            width: 260px;
-            height: 260px;
-            border-radius: 50%;
-            border: 8px solid var(--primary);
-            background-size: cover;
-            background-position: center;
-            background-image: url('img/gor1.png'); /* По умолчанию */
-            box-shadow: 0 0 40px rgba(243, 156, 18, 0.4);
-            transition: transform 0.08s, border-color 0.3s;
-            cursor: pointer;
-            z-index: 2;
+            width: 250px; height: 250px; border-radius: 50%;
+            border: 5px solid orange;
+            background-image: url('img/gor1.png');
+            background-size: cover; background-position: center;
+            transition: transform 0.1s;
+            box-shadow: 0 0 20px orange;
         }
-        .gor-skin:active { transform: scale(0.92); }
+        .gor-skin:active { transform: scale(0.95); }
 
-        /* Всплывающие цифры */
-        .float-text {
-            position: absolute;
-            font-weight: bold;
-            font-size: 24px;
-            color: #fff;
-            pointer-events: none;
-            animation: floatUp 0.8s forwards;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        .rage-btn {
+            margin-top: 20px; padding: 10px 30px; border-radius: 20px;
+            background: #444; color: #888; font-weight: bold;
+            position: relative; overflow: hidden;
         }
-        @keyframes floatUp {
-            0% { transform: translateY(0) scale(1); opacity: 1; }
-            100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+        .rage-btn.ready {
+            background: red; color: white; box-shadow: 0 0 15px red; cursor: pointer;
         }
 
-        /* Магазин */
-        .shop-panel {
-            width: 100%;
-            height: 45%;
-            background: var(--panel);
-            border-top-left-radius: 25px;
-            border-top-right-radius: 25px;
-            padding: 20px;
-            box-sizing: border-box;
-            overflow-y: auto;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+        .shop {
+            width: 100%; height: 40%; background: #1a1a1a;
+            border-top: 2px solid orange; padding: 10px; overflow-y: auto;
         }
-
-        .shop-title { margin-top: 0; text-align: center; color: var(--primary); }
-
-        .upgrade-item {
-            background: rgba(255,255,255,0.05);
-            margin-bottom: 10px;
-            padding: 12px;
-            border-radius: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border: 1px solid transparent;
+        .shop-item {
+            background: #333; padding: 10px; margin-bottom: 5px; border-radius: 8px;
+            display: flex; justify-content: space-between; align-items: center;
         }
-        .upgrade-item:active { background: rgba(255,255,255,0.1); }
+        button { padding: 5px 10px; border: none; border-radius: 5px; font-weight: bold; }
+        .buy-btn { background: orange; color: black; }
+        .withdraw-btn { position: absolute; top: 60px; right: 10px; background: green; color: white; padding: 10px; z-index: 10; }
 
-        .upg-info h4 { margin: 0; font-size: 16px; }
-        .upg-info p { margin: 3px 0 0; font-size: 12px; color: #888; }
-        
-        .upg-btn {
-            background: var(--primary);
-            border: none;
-            color: #000;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: pointer;
+        /* СКРИМЕР */
+        #jumpscare {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: black; z-index: 9999; justify-content: center; align-items: center;
         }
-        .upg-btn:disabled { background: #555; color: #888; cursor: not-allowed; }
-
-        /* Кнопка вывода */
-        .withdraw-btn {
-            position: absolute;
-            top: 70px;
-            right: 20px;
-            background: var(--green);
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 14px;
-            box-shadow: 0 4px 10px rgba(46, 204, 113, 0.4);
-            cursor: pointer;
-            z-index: 5;
+        #jumpscare img { width: 100%; height: 100%; object-fit: cover; }
+        #scary-text {
+            position: absolute; bottom: 20%; color: red; font-size: 30px; 
+            font-weight: bold; text-shadow: 0 0 5px black;
         }
     </style>
 </head>
 <body>
-
     <audio id="sndClick" src="sounds/click.mp3"></audio>
-    <audio id="sndBuy" src="sounds/buy.mp3"></audio>
-    <audio id="sndLvl" src="sounds/level_up.mp3"></audio>
+    <audio id="sndRage" src="sounds/rage.mp3"></audio>
+    <audio id="sndScream" src="sounds/scream.mp3"></audio>
 
-    <div class="header">
-        <div class="balance-box">💰 <span id="balance">0</span></div>
-        <div class="cps-box">⚡️ <span id="cps">0</span>/сек</div>
+    <div id="jumpscare">
+        <img src="img/gor_scary.png">
+        <div id="scary-text">ТЫ ПОТЕРЯЛ ВСЁ!</div>
     </div>
 
+    <div class="header">
+        <div>💰 <span id="bal">0</span></div>
+    </div>
     <div class="withdraw-btn" onclick="sendToBot()">📥 В БОТА</div>
 
     <div class="game-area">
-        <div class="gor-skin" id="gorSkin" onclick="clickAction(event)"></div>
-        <div style="margin-top: 20px; opacity: 0.6;">Всего кликов: <span id="totalClicks">0</span></div>
+        <div class="gor-skin" onclick="clickAction()"></div>
+        <div class="rage-btn" id="rageBtn" onclick="activateRage()">
+            <span id="rageTxt">ЯРОСТЬ (0/100)</span>
+        </div>
     </div>
 
-    <div class="shop-panel">
-        <h3 class="shop-title">🔨 ПРОКАЧКА</h3>
-        <div id="upgradesList">
-            </div>
-    </div>
+    <div class="shop" id="shopList"></div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // === СОСТОЯНИЕ ИГРЫ ===
-        let gameState = {
+        let state = {
             balance: 0,
-            totalClicks: 0,
-            clickPower: 1,
-            autoClick: 0,
-            skinIndex: 1,
+            clicks: 0,
+            rageCount: 0,
+            isRage: false,
             upgrades: {
-                multitap: { level: 0, baseCost: 50, name: "Мультиклик", desc: "+1 за клик" },
-                energy:   { level: 0, baseCost: 300, name: "Энергетик", desc: "+5 за клик" },
-                triple:   { level: 0, baseCost: 5000, name: "Тройной удар", desc: "Клик x3 (Уникально!)", max: 1 },
-                auto1:    { level: 0, baseCost: 200, name: "Младший брат", desc: "+2 сек/авто" },
-                auto2:    { level: 0, baseCost: 1000, name: "Ферма Гора", desc: "+15 сек/авто" },
-                auto3:    { level: 0, baseCost: 10000, name: "Крипто Завод", desc: "+100 сек/авто" }
+                power: { lvl: 0, cost: 50, name: "Сила", desc: "+1 клик" },
+                risk: { lvl: 0, cost: 500, name: "Опасный x5", desc: "x5, но риск скримера", max: 1 },
+                auto: { lvl: 0, cost: 200, name: "Авто-Гор", desc: "+2/сек" }
             }
         };
 
-        const skins = ['img/gor1.png', 'img/gor2.png', 'img/gor3.png', 'img/gor4.png'];
+        // Загрузка
+        const urlParams = new URLSearchParams(window.location.search);
+        let botBal = parseInt(urlParams.get('bal')) || 0;
+        // Загружаем сейв, если есть
+        let saved = localStorage.getItem('goram_save_v1');
+        if (saved) {
+            try { 
+                let p = JSON.parse(saved);
+                state = {...state, ...p, upgrades: {...state.upgrades, ...p.upgrades}};
+            } catch(e){}
+        }
+        // Если в боте денег больше, берем оттуда
+        if (botBal > state.balance) state.balance = botBal;
         
-        const sounds = {
-            click: document.getElementById('sndClick'),
-            buy: document.getElementById('sndBuy'),
-            lvl: document.getElementById('sndLvl')
-        };
-
-        // === СИСТЕМА СОХРАНЕНИЙ ===
-        function loadGame() {
-            const saved = localStorage.getItem('goram_save_v2');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    gameState = { ...gameState, ...parsed, upgrades: { ...gameState.upgrades, ...parsed.upgrades } };
-                } catch (e) { console.error("Save Error", e); }
-            }
-            const urlParams = new URLSearchParams(window.location.search);
-            const botBal = parseInt(urlParams.get('bal'));
-            if (!isNaN(botBal) && botBal > gameState.balance) {
-                gameState.balance = botBal;
-            }
+        // Рендер
+        function render() {
+            document.getElementById('bal').innerText = Math.floor(state.balance);
             
-            updateUI();
-            updateShopUI();
-            changeSkin(gameState.skinIndex - 1);
-        }
+            // Ярость
+            const rBtn = document.getElementById('rageBtn');
+            const rTxt = document.getElementById('rageTxt');
+            rTxt.innerText = state.isRage ? "🔥 ААААА !!! 🔥" : `ЯРОСТЬ (${state.rageCount}/100)`;
+            if (state.rageCount >= 100 && !state.isRage) rBtn.classList.add('ready');
+            else rBtn.classList.remove('ready');
 
-        function saveGame() {
-            localStorage.setItem('goram_save_v2', JSON.stringify(gameState));
-        }
-
-        setInterval(saveGame, 2000);
-
-        // === ИГРОВАЯ ЛОГИКА ===
-        
-        function clickAction(e) {
-            // Расчет силы
-            let power = (1 + gameState.upgrades.multitap.level + (gameState.upgrades.energy.level * 5));
-            if (gameState.upgrades.triple.level > 0) power *= 3;
-
-            gameState.balance += power;
-            gameState.totalClicks++;
-
-            // --- ЗВУК (Только каждый 20-й клик) ---
-            if (gameState.totalClicks % 20 === 0) {
-                sounds.click.currentTime = 0;
-                sounds.click.play().catch(()=>{});
-            }
-            // -------------------------------------
-
-            // Визуал
-            tg.HapticFeedback.impactOccurred('medium');
-            showFloatingText(e.clientX, e.clientY, `+${power}`);
-            
-            // Смена скина каждые 500 кликов
-            if (gameState.totalClicks % 500 === 0) {
-                randomizeSkin();
-            }
-
-            updateUI();
-            checkShopAvailability();
-        }
-
-        // Авто-кликер
-        setInterval(() => {
-            if (gameState.autoClick > 0) {
-                gameState.balance += gameState.autoClick;
-                updateUI();
-                checkShopAvailability();
-            }
-        }, 1000);
-
-        // Смена скина
-        function randomizeSkin() {
-            const idx = Math.floor(Math.random() * skins.length);
-            gameState.skinIndex = idx + 1;
-            changeSkin(idx);
-            sounds.lvl.play().catch(()=>{});
-            tg.HapticFeedback.notificationOccurred('success');
-        }
-
-        function changeSkin(idx) {
-            document.getElementById('gorSkin').style.backgroundImage = `url('${skins[idx]}')`;
-        }
-
-        // === МАГАЗИН ===
-        function getCost(key) {
-            const upg = gameState.upgrades[key];
-            return Math.floor(upg.baseCost * Math.pow(1.5, upg.level));
-        }
-
-        function buyUpgrade(key) {
-            const cost = getCost(key);
-            const upg = gameState.upgrades[key];
-
-            if (gameState.balance >= cost) {
-                if (upg.max && upg.level >= upg.max) return;
-
-                gameState.balance -= cost;
-                upg.level++;
-                
-                if (key === 'auto1') gameState.autoClick += 2;
-                if (key === 'auto2') gameState.autoClick += 15;
-                if (key === 'auto3') gameState.autoClick += 100;
-
-                sounds.buy.play().catch(()=>{});
-                tg.HapticFeedback.selectionChanged();
-                
-                saveGame();
-                updateUI();
-                updateShopUI();
-            }
-        }
-
-        // === ИНТЕРФЕЙС ===
-        function updateUI() {
-            document.getElementById('balance').innerText = Math.floor(gameState.balance);
-            document.getElementById('cps').innerText = gameState.autoClick;
-            document.getElementById('totalClicks').innerText = gameState.totalClicks;
-        }
-
-        function showFloatingText(x, y, text) {
-            const el = document.createElement('div');
-            el.className = 'float-text';
-            el.innerText = text;
-            el.style.left = x + 'px';
-            el.style.top = y + 'px';
-            document.body.appendChild(el);
-            setTimeout(() => el.remove(), 800);
-        }
-
-        function updateShopUI() {
-            const list = document.getElementById('upgradesList');
+            // Магазин
+            const list = document.getElementById('shopList');
             list.innerHTML = '';
-
-            for (const key in gameState.upgrades) {
-                const upg = gameState.upgrades[key];
-                const cost = getCost(key);
-                const isMax = upg.max && upg.level >= upg.max;
-
-                const item = document.createElement('div');
-                item.className = 'upgrade-item';
-                item.innerHTML = `
-                    <div class="upg-info">
-                        <h4>${upg.name} (Lvl ${upg.level})</h4>
-                        <p>${upg.desc}</p>
-                    </div>
-                    <button class="upg-btn" id="btn_${key}" onclick="buyUpgrade('${key}')">
-                        ${isMax ? 'MAX' : cost + '💰'}
+            for(let key in state.upgrades) {
+                let u = state.upgrades[key];
+                let cost = Math.floor(u.cost * Math.pow(1.5, u.lvl));
+                let isMax = u.max && u.lvl >= u.max;
+                
+                let d = document.createElement('div');
+                d.className = 'shop-item';
+                d.innerHTML = `
+                    <div><b>${u.name}</b> (Lvl ${u.lvl})<br><small>${u.desc}</small></div>
+                    <button class="buy-btn" onclick="buy('${key}')" ${state.balance<cost||isMax?'disabled':''}>
+                        ${isMax?'MAX':cost}
                     </button>
                 `;
-                list.appendChild(item);
+                list.appendChild(d);
             }
-            checkShopAvailability();
+            localStorage.setItem('goram_save_v1', JSON.stringify(state));
         }
 
-        function checkShopAvailability() {
-            for (const key in gameState.upgrades) {
-                const btn = document.getElementById(`btn_${key}`);
-                if(btn) {
-                    const cost = getCost(key);
-                    const isMax = gameState.upgrades[key].max && gameState.upgrades[key].level >= gameState.upgrades[key].max;
-                    
-                    if (isMax) {
-                        btn.disabled = true;
-                        btn.style.background = "#2ecc71";
-                    } else if (gameState.balance < cost) {
-                        btn.disabled = true;
-                        btn.style.opacity = "0.5";
-                    } else {
-                        btn.disabled = false;
-                        btn.style.opacity = "1";
-                    }
+        function clickAction() {
+            let power = 1 + state.upgrades.power.lvl;
+            let hasRisk = state.upgrades.risk.lvl > 0;
+
+            if (hasRisk) power *= 5;
+            if (state.isRage) power *= 2;
+
+            // --- ЛОГИКА СКРИМЕРА ---
+            // Если куплен риск x5, нет ярости, и каждый 3й клик
+            if (hasRisk && !state.isRage && state.clicks % 3 === 0) {
+                // Шанс 15%
+                if (Math.random() < 0.15) {
+                    triggerScreamer();
+                    return; // Клик не засчитываем
                 }
             }
+            // ---------------------
+
+            state.balance += power;
+            state.clicks++;
+            tg.HapticFeedback.impactOccurred('light');
+
+            // Копим ярость
+            if (!state.isRage && state.rageCount < 100) state.rageCount++;
+
+            // Звук
+            if (Math.random() < 0.3) {
+                let s = document.getElementById('sndClick');
+                s.currentTime=0; s.play().catch(()=>{});
+            }
+
+            render();
         }
 
-        // === ОТПРАВКА В БОТА ===
-        function sendToBot() {
-            if (gameState.balance < 1) return;
-            const amount = Math.floor(gameState.balance);
+        function triggerScreamer() {
+            // Штраф 65%
+            let loss = Math.floor(state.balance * 0.65);
+            state.balance -= loss;
             
-            tg.showConfirm(`Вывести ${amount} звезд в бота?`, (ok) => {
+            document.getElementById('scary-text').innerText = `ПОТЕРЯНО: -${loss}`;
+            document.getElementById('jumpscare').style.display = 'flex';
+            document.getElementById('sndScream').play().catch(()=>{});
+            tg.HapticFeedback.notificationOccurred('error');
+
+            setTimeout(() => {
+                document.getElementById('jumpscare').style.display = 'none';
+                render();
+            }, 1500);
+        }
+
+        function activateRage() {
+            if (state.rageCount < 100 || state.isRage) return;
+            state.isRage = true; state.rageCount = 0;
+            document.body.classList.add('rage');
+            document.getElementById('sndRage').play().catch(()=>{});
+            tg.HapticFeedback.notificationOccurred('warning');
+            render();
+
+            setTimeout(() => {
+                state.isRage = false;
+                document.body.classList.remove('rage');
+                render();
+            }, 10000);
+        }
+
+        function buy(key) {
+            let u = state.upgrades[key];
+            let cost = Math.floor(u.cost * Math.pow(1.5, u.lvl));
+            if (state.balance >= cost) {
+                state.balance -= cost;
+                u.lvl++;
+                render();
+            }
+        }
+
+        function sendToBot() {
+            let amt = Math.floor(state.balance);
+            if (amt <= 0) return;
+            tg.showConfirm(`Вывести ${amt} звезд?`, (ok) => {
                 if(ok) {
-                    const data = JSON.stringify({ action: 'game_result', profit: amount, game: 'Tycoon Withdraw' });
-                    tg.sendData(data);
+                    tg.sendData(JSON.stringify({action:'game_result', profit: amt}));
+                    state.balance = 0; // Обнуляем в приложении после вывода
+                    render();
                 }
             });
         }
 
-        loadGame();
+        // Авто-клик
+        setInterval(() => {
+            if (state.upgrades.auto.lvl > 0) {
+                state.balance += (state.upgrades.auto.lvl * 2);
+                render();
+            }
+        }, 1000);
+
+        render();
     </script>
 </body>
 </html>
