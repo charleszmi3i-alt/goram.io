@@ -7,8 +7,8 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --primary: #ff9f1a; /* Оранжевый Гора */
-            --accent: #ff3838;  /* Красный (Риск/Ярость) */
+            --primary: #ff9f1a;
+            --accent: #ff3838;
             --bg: #050505;
             --glass: rgba(20, 20, 20, 0.75);
             --border: rgba(255, 159, 26, 0.3);
@@ -31,7 +31,7 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* --- ФОН (ЛЕТАЮЩИЕ ГОРЫ) --- */
+        /* --- ФОН --- */
         #bg-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             z-index: -1; overflow: hidden; pointer-events: none;
@@ -128,12 +128,22 @@
         .item-card:active { background: rgba(255,255,255,0.08); }
         .item-info h4 { margin: 0; font-size: 15px; color: var(--primary); }
         .item-info p { margin: 4px 0 0; font-size: 11px; color: #888; }
+        
         .buy-btn {
             background: var(--primary); border: none; padding: 8px 14px;
             border-radius: 8px; font-weight: 700; font-size: 13px; color: #000;
             min-width: 70px; cursor: pointer;
         }
         .buy-btn:disabled { background: #333; color: #555; cursor: not-allowed; }
+        
+        /* Кнопка переключения риска */
+        .toggle-btn {
+            padding: 8px 14px; border-radius: 8px; font-weight: 700; font-size: 12px;
+            border: none; cursor: pointer; transition: all 0.2s;
+        }
+        .toggle-btn.on { background: #2ecc71; color: #000; box-shadow: 0 0 10px #2ecc71; }
+        .toggle-btn.off { background: #444; color: #aaa; }
+
         .max-badge { background: #2ecc71; color: #000; font-size: 12px; padding: 5px 10px; border-radius: 6px; font-weight: bold; }
 
         /* ЭФФЕКТЫ */
@@ -145,7 +155,6 @@
         .float-txt.crit { color: var(--accent); font-size: 32px; z-index: 100; }
         @keyframes floatText { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-80px) scale(1.5); opacity: 0; } }
 
-        /* СКРИМЕР */
         #jumpscare {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: black; z-index: 9999; flex-direction: column; justify-content: center; align-items: center;
@@ -153,7 +162,6 @@
         #jumpscare img { width: 100%; height: 100%; object-fit: cover; position: absolute; }
         .scam-text { position: relative; color: red; font-size: 40px; font-weight: 900; z-index: 10; text-shadow: 0 0 20px black; }
 
-        /* Rage Mode Styles */
         body.rage-active { background: #3b0000; }
         body.rage-active .gor-skin { border-color: red; animation: shakeSkin 0.1s infinite; }
         @keyframes shakeSkin { 0% { transform: translate(1px, 1px); } 100% { transform: translate(-1px, -1px); } }
@@ -206,35 +214,27 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // === КОНФИГ ИГРЫ ===
         let state = {
             bal: 0,
             clicks: 0,
             rage: 0,
             rageActive: false,
+            riskActive: false, // Флаг включен ли риск
             upgrades: {
-                // БАЗОВЫЕ
                 gym:     { lvl: 0, cost: 50,    base: 1, name: "💪 Гантеля", desc: "+1 урон за клик" },
                 drink:   { lvl: 0, cost: 300,   base: 5, name: "⚡️ Энергетик", desc: "+5 урон за клик" },
                 auto1:   { lvl: 0, cost: 200,   base: 2, name: "🥙 Шаурма", desc: "Авто-доход +2/сек" },
-                
-                // ПРОДВИНУТЫЕ
                 slipper: { lvl: 0, cost: 1500,  mult: 1.5, name: "🩴 Тапок Судьбы", desc: "Множитель клика x1.5" },
                 auto2:   { lvl: 0, cost: 5000,  base: 50, name: "🏭 Завод Клонов", desc: "Авто-доход +50/сек" },
-                
-                // УНИКАЛЬНЫЕ
                 tax:     { lvl: 0, cost: 10000, mult: 1.2, name: "💸 Уход от налогов", desc: "Пассивный доход +20%" },
                 crit:    { lvl: 0, cost: 750,   chance: 0.1, name: "🎯 Вор Шампуров", desc: "10% шанс на крит x10" },
-                
-                // РИСК
-                risk:    { lvl: 0, cost: 666,   name: "☠️ Опасный x5", desc: "Урон x5, но риск скримера!", max: 1 }
+                risk:    { lvl: 0, cost: 666,   name: "☠️ Опасный x5", desc: "ВКЛ/ВЫКЛ: x5, но риск скримера", max: 1 }
             }
         };
 
-        // Загрузка
         const urlP = new URLSearchParams(window.location.search);
         let startBal = parseInt(urlP.get('bal')) || 0;
-        let local = localStorage.getItem('goram_v39');
+        let local = localStorage.getItem('goram_v39_2'); // Новый сейв
         if(local) {
             try { 
                 let p = JSON.parse(local);
@@ -243,7 +243,6 @@
         }
         if (startBal > state.bal) state.bal = startBal;
 
-        // Звуки
         const aud = {
             click: document.getElementById('sClick'),
             buy: document.getElementById('sBuy'),
@@ -251,7 +250,6 @@
             scam: document.getElementById('sScream')
         };
 
-        // --- ФОН ---
         function spawnFly() {
             const bg = document.getElementById('bg-layer');
             const el = document.createElement('div');
@@ -266,16 +264,15 @@
         }
         setInterval(spawnFly, 2500);
 
-        // --- ЛОГИКА ---
         function getClickPower() {
             let u = state.upgrades;
             let base = 1 + u.gym.lvl * 1 + u.drink.lvl * 5;
-            
-            // Множители
             if (u.slipper.lvl > 0) base *= Math.pow(1.5, u.slipper.lvl);
-            if (u.risk.lvl > 0) base *= 5;
-            if (state.rageActive) base *= 2;
             
+            // ПРИМЕНЯЕМ X5 ТОЛЬКО ЕСЛИ ВКЛЮЧЕНА КНОПКА
+            if (u.risk.lvl > 0 && state.riskActive) base *= 5;
+            
+            if (state.rageActive) base *= 2;
             return Math.floor(base);
         }
 
@@ -290,13 +287,12 @@
             let dmg = getClickPower();
             let isCrit = false;
 
-            // Крит
             if (state.upgrades.crit.lvl > 0 && Math.random() < 0.1) {
                 dmg *= 10; isCrit = true;
             }
 
-            // РИСК (Скример)
-            if (state.upgrades.risk.lvl > 0 && !state.rageActive && state.clicks % 3 === 0) {
+            // ЛОГИКА СКРИМЕРА (Только если риск куплен, включен и нет ярости)
+            if (state.upgrades.risk.lvl > 0 && state.riskActive && !state.rageActive && state.clicks % 3 === 0) {
                 if(Math.random() < 0.15) {
                     triggerScam(); return;
                 }
@@ -305,13 +301,11 @@
             state.bal += dmg;
             state.clicks++;
             
-            // Ярость
             if(!state.rageActive) {
-                state.rage += 1.5; // Быстрее копится
+                state.rage += 1.5;
                 if(state.rage > 100) state.rage = 100;
             }
 
-            // Эффекты
             spawnFloat(e.clientX, e.clientY, `+${dmg}`, isCrit);
             tg.HapticFeedback.impactOccurred(isCrit ? 'heavy' : 'light');
             
@@ -352,7 +346,6 @@
             aud.rage.play().catch(()=>{});
             tg.HapticFeedback.notificationOccurred('warning');
             render();
-            
             setTimeout(()=>{
                 state.rageActive = false;
                 document.body.classList.remove('rage-active');
@@ -360,7 +353,7 @@
             }, 10000);
         }
 
-        // --- МАГАЗИН ---
+        // --- МАГАЗИН И ПЕРЕКЛЮЧАТЕЛЬ ---
         function buy(k) {
             let u = state.upgrades[k];
             let price = Math.floor(u.cost * Math.pow(1.5, u.lvl));
@@ -372,16 +365,20 @@
             }
         }
 
+        function toggleRisk() {
+            state.riskActive = !state.riskActive;
+            tg.HapticFeedback.selectionChanged();
+            render();
+        }
+
         function render() {
             document.getElementById('bal').innerText = Math.floor(state.bal);
             document.getElementById('dmgVal').innerText = getClickPower();
             document.getElementById('cpsVal').innerText = getAutoPower();
 
-            // Rage UI
             let rBar = document.getElementById('rageFill');
             let rTxt = document.getElementById('rageText');
             let rWrap = document.getElementById('rageWrap');
-            
             rBar.style.width = state.rage + '%';
             if(state.rageActive) {
                 rTxt.innerText = "🔥 ЯРОСТЬ АКТИВНА 🔥";
@@ -394,13 +391,30 @@
                 rWrap.classList.remove('rage-ready');
             }
 
-            // Shop UI
             let list = document.getElementById('shopList');
             list.innerHTML = '';
             for(let k in state.upgrades) {
                 let u = state.upgrades[k];
                 let price = Math.floor(u.cost * Math.pow(1.5, u.lvl));
                 let isMax = u.max && u.lvl >= u.max;
+
+                // СПЕЦИАЛЬНАЯ ЛОГИКА ДЛЯ "ОПАСНЫЙ X5"
+                let buttonHtml = '';
+                
+                if (k === 'risk' && u.lvl > 0) {
+                    // Если риск куплен -> показываем переключатель
+                    let btnClass = state.riskActive ? 'toggle-btn on' : 'toggle-btn off';
+                    let btnText = state.riskActive ? 'ВКЛЮЧЕНО ✅' : 'ВЫКЛЮЧЕНО ❌';
+                    buttonHtml = `<button class="${btnClass}" onclick="toggleRisk()">${btnText}</button>`;
+                } else {
+                    // Обычная кнопка покупки
+                    if (isMax) {
+                        buttonHtml = '<span class="max-badge">MAX</span>';
+                    } else {
+                        let disabled = state.bal < price ? 'disabled' : '';
+                        buttonHtml = `<button class="buy-btn" onclick="buy('${k}')" ${disabled}>${price}</button>`;
+                    }
+                }
 
                 let div = document.createElement('div');
                 div.className = 'item-card';
@@ -409,15 +423,12 @@
                         <h4>${u.name} <span style="color:#fff; opacity:0.5; font-size:11px">Lvl ${u.lvl}</span></h4>
                         <p>${u.desc}</p>
                     </div>
-                    ${isMax 
-                        ? '<span class="max-badge">MAX</span>' 
-                        : `<button class="buy-btn" onclick="buy('${k}')" ${state.bal<price?'disabled':''}>${price}</button>`
-                    }
+                    ${buttonHtml}
                 `;
                 list.appendChild(div);
             }
             
-            localStorage.setItem('goram_v39', JSON.stringify(state));
+            localStorage.setItem('goram_v39_2', JSON.stringify(state));
         }
 
         function withdraw() {
@@ -428,17 +439,13 @@
             });
         }
 
-        // Авто-доход
         setInterval(()=>{
             let gain = getAutoPower();
-            if(gain > 0) {
-                state.bal += gain;
-                render();
-            }
+            if(gain > 0) { state.bal += gain; render(); }
         }, 1000);
 
         render();
-        spawnFly(); spawnFly(); // Старт фоновой анимации
+        spawnFly(); spawnFly();
     </script>
 </body>
 </html>
