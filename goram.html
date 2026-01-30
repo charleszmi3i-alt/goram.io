@@ -114,8 +114,13 @@
             overflow-y: auto; z-index: 20;
             box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
         }
-        .shop-title { margin: 0 0 15px 0; font-size: 18px; color: #fff; display: flex; justify-content: space-between; }
-        .withdraw-btn { background: #2ecc71; color: #000; font-size: 12px; padding: 5px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; }
+        .shop-title { margin: 0 0 15px 0; font-size: 18px; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+        
+        .withdraw-btn { 
+            background: #2ecc71; color: #000; font-size: 11px; padding: 6px 12px; 
+            border-radius: 8px; cursor: pointer; display: flex; align-items: center; font-weight: bold;
+            box-shadow: 0 0 10px rgba(46, 204, 113, 0.3);
+        }
 
         .item-card {
             background: rgba(255,255,255,0.03);
@@ -184,7 +189,7 @@
 
     <div class="header">
         <div class="balance-box">
-            <span class="bal-label">Твой Баланс</span>
+            <span class="bal-label">Монеты</span>
             <span class="balance" id="bal">0</span>
         </div>
         <div class="stats-box">
@@ -203,10 +208,10 @@
     </div>
 
     <div class="shop-container">
-        <h3 class="shop-title">
+        <div class="shop-title">
             🛒 Магазин
-            <div class="withdraw-btn" onclick="withdraw()">📥 В БОТА</div>
-        </h3>
+            <div class="withdraw-btn" onclick="withdraw()">📥 ВЫВОД (2.5★ = 1000м)</div>
+        </div>
         <div id="shopList"></div>
     </div>
 
@@ -219,7 +224,7 @@
             clicks: 0,
             rage: 0,
             rageActive: false,
-            riskActive: false, // Флаг включен ли риск
+            riskActive: false,
             upgrades: {
                 gym:     { lvl: 0, cost: 50,    base: 1, name: "💪 Гантеля", desc: "+1 урон за клик" },
                 drink:   { lvl: 0, cost: 300,   base: 5, name: "⚡️ Энергетик", desc: "+5 урон за клик" },
@@ -228,19 +233,20 @@
                 auto2:   { lvl: 0, cost: 5000,  base: 50, name: "🏭 Завод Клонов", desc: "Авто-доход +50/сек" },
                 tax:     { lvl: 0, cost: 10000, mult: 1.2, name: "💸 Уход от налогов", desc: "Пассивный доход +20%" },
                 crit:    { lvl: 0, cost: 750,   chance: 0.1, name: "🎯 Вор Шампуров", desc: "10% шанс на крит x10" },
-                risk:    { lvl: 0, cost: 666,   name: "☠️ Опасный x5", desc: "ВКЛ/ВЫКЛ: x5, но риск скримера", max: 1 }
+                risk:    { lvl: 0, cost: 1000,   name: "☠️ Опасный x15", desc: "ВКЛ/ВЫКЛ: x15, риск скримера (10%)", max: 1 }
             }
         };
 
         const urlP = new URLSearchParams(window.location.search);
         let startBal = parseInt(urlP.get('bal')) || 0;
-        let local = localStorage.getItem('goram_v39_2'); // Новый сейв
+        let local = localStorage.getItem('goram_v40'); 
         if(local) {
             try { 
                 let p = JSON.parse(local);
                 state = {...state, ...p, upgrades: {...state.upgrades, ...p.upgrades}};
             } catch(e){}
         }
+        // Синхронизация: если в боте больше, берем из бота.
         if (startBal > state.bal) state.bal = startBal;
 
         const aud = {
@@ -269,8 +275,8 @@
             let base = 1 + u.gym.lvl * 1 + u.drink.lvl * 5;
             if (u.slipper.lvl > 0) base *= Math.pow(1.5, u.slipper.lvl);
             
-            // ПРИМЕНЯЕМ X5 ТОЛЬКО ЕСЛИ ВКЛЮЧЕНА КНОПКА
-            if (u.risk.lvl > 0 && state.riskActive) base *= 5;
+            // X15 MULTIPLIER
+            if (u.risk.lvl > 0 && state.riskActive) base *= 15;
             
             if (state.rageActive) base *= 2;
             return Math.floor(base);
@@ -291,9 +297,9 @@
                 dmg *= 10; isCrit = true;
             }
 
-            // ЛОГИКА СКРИМЕРА (Только если риск куплен, включен и нет ярости)
+            // ЛОГИКА СКРИМЕРА (10% шанс каждые 3 клика)
             if (state.upgrades.risk.lvl > 0 && state.riskActive && !state.rageActive && state.clicks % 3 === 0) {
-                if(Math.random() < 0.15) {
+                if(Math.random() < 0.10) { // Шанс 10%
                     triggerScam(); return;
                 }
             }
@@ -353,7 +359,6 @@
             }, 10000);
         }
 
-        // --- МАГАЗИН И ПЕРЕКЛЮЧАТЕЛЬ ---
         function buy(k) {
             let u = state.upgrades[k];
             let price = Math.floor(u.cost * Math.pow(1.5, u.lvl));
@@ -398,16 +403,12 @@
                 let price = Math.floor(u.cost * Math.pow(1.5, u.lvl));
                 let isMax = u.max && u.lvl >= u.max;
 
-                // СПЕЦИАЛЬНАЯ ЛОГИКА ДЛЯ "ОПАСНЫЙ X5"
                 let buttonHtml = '';
-                
                 if (k === 'risk' && u.lvl > 0) {
-                    // Если риск куплен -> показываем переключатель
                     let btnClass = state.riskActive ? 'toggle-btn on' : 'toggle-btn off';
-                    let btnText = state.riskActive ? 'ВКЛЮЧЕНО ✅' : 'ВЫКЛЮЧЕНО ❌';
+                    let btnText = state.riskActive ? 'ВКЛЮЧЕНО (x15)' : 'ВЫКЛЮЧЕНО';
                     buttonHtml = `<button class="${btnClass}" onclick="toggleRisk()">${btnText}</button>`;
                 } else {
-                    // Обычная кнопка покупки
                     if (isMax) {
                         buttonHtml = '<span class="max-badge">MAX</span>';
                     } else {
@@ -428,14 +429,27 @@
                 list.appendChild(div);
             }
             
-            localStorage.setItem('goram_v39_2', JSON.stringify(state));
+            localStorage.setItem('goram_v40', JSON.stringify(state));
         }
 
+        // --- НОВЫЙ ВЫВОД (1000 = 2.5 звезды) ---
         function withdraw() {
-            let val = Math.floor(state.bal);
-            if(val<=0) return;
-            tg.showConfirm(`Вывести ${val} звезд?`, ok=>{
-                if(ok) tg.sendData(JSON.stringify({action:'game_result', profit:val}));
+            // Курс: 1000 монет = 2.5 звезды. Значит 1 монета = 0.0025 звезды
+            // Или 400 монет = 1 звезда
+            let stars = Math.floor(state.bal * 0.0025);
+            
+            if(stars < 1) {
+                tg.showAlert("Нужно минимум 400 монет для вывода 1 звезды!");
+                return;
+            }
+
+            tg.showConfirm(`Вывести ${stars} звезд?\n(Спишется ${Math.floor(stars / 0.0025)} монет)`, ok=>{
+                if(ok) {
+                    let cost = Math.floor(stars / 0.0025);
+                    state.bal -= cost; // Списываем монеты
+                    render();
+                    tg.sendData(JSON.stringify({action:'game_result', profit: stars}));
+                }
             });
         }
 
